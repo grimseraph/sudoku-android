@@ -8,47 +8,51 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Setup Environment
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Node
+      - name: Setup Node (Updated to 22)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Full Build Process
         run: |
-          # 1. 安装最核心的打包工具
-          npm install @capacitor/cli @capacitor/core @capacitor/android
+          # 1. 强制安装 Capacitor 核心工具
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
           
-          # 2. 确保 Web 目录和文件正确
+          # 2. 准备 Web 资源
           mkdir -p www
-          cp sudoku.html www/index.html || echo "Using existing index.html"
+          cp sudoku.html www/index.html || echo "Using existing file"
           
-          # 3. 初始化并重新生成 Android 工程 (使用完整包名避免权限问题)
+          # 3. 使用绝对路径运行 Capacitor 避免权限问题 (关键修复!)
+          # 绕过 npx 直接调用 node_modules 里的可执行文件
+          CAP="./node_modules/.bin/cap"
+          
+          # 初始化配置
           if [ ! -f "capacitor.config.json" ]; then
-            npx @capacitor/cli init "SudokuApp" "com.example.sudoku" --web-dir www --y
+            $CAP init "SudokuApp" "com.example.sudoku" --web-dir www --y
           fi
           
-          # 强制刷新 Android 目录
+          # 重新构建 Android 目录
           rm -rf android
-          npx @capacitor/cli add android
-          npx @capacitor/cli sync android
+          $CAP add android
+          $CAP sync android
           
-          # 4. 进入 Android 目录进行真正的打包
+          # 4. 进入 Android 目录打包
           cd android
-          # 解决 Windows 换行符导致的 127 报错
+          # 解决 Windows 带来的换行符问题
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK Result
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: sudoku-app
