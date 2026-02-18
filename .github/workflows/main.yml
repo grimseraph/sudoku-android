@@ -24,28 +24,27 @@ jobs:
 
       - name: Full Build Process
         run: |
-          # 1. 安装工具
+          # 1. 安装工具 (保证最新版本)
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
           
           # 2. 准备资源
           mkdir -p www
           cp sudoku.html www/index.html || echo "File exists"
           
-          # 3. 核心修复：使用 node 直接运行脚本，绕过所有 shell 权限限制
-          CAP="node ./node_modules/@capacitor/cli/bin/cap"
-          
-          # 初始化 (如果不存在)
+          # 3. 通过 npm 脚本运行，让 npm 帮我们处理路径和权限问题
+          # 这是 Node 项目最稳妥的调用方式
           if [ ! -f "capacitor.config.json" ]; then
-            $CAP init "SudokuApp" "com.example.sudoku" --web-dir www --y
+            npm run cap -- init "SudokuApp" "com.example.sudoku" --web-dir www --y
           fi
           
-          # 重新生成 Android
+          # 强制刷新 Android 目录
           rm -rf android
-          $CAP add android
-          $CAP sync android
+          npm run cap -- add android
+          npm run cap -- sync android
           
           # 4. 构建 APK
           cd android
+          # 解决 Windows 换行符导致的 127 报错
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug
