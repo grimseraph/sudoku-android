@@ -17,37 +17,35 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Node (Updated to 22)
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Full Build Process
         run: |
-          # 1. 强制安装 Capacitor 核心工具
+          # 1. 安装工具
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
           
-          # 2. 准备 Web 资源
+          # 2. 准备资源
           mkdir -p www
-          cp sudoku.html www/index.html || echo "Using existing file"
+          cp sudoku.html www/index.html || echo "File exists"
           
-          # 3. 使用绝对路径运行 Capacitor 避免权限问题 (关键修复!)
-          # 绕过 npx 直接调用 node_modules 里的可执行文件
-          CAP="./node_modules/.bin/cap"
+          # 3. 核心修复：使用 node 直接运行脚本，绕过所有 shell 权限限制
+          CAP="node ./node_modules/@capacitor/cli/bin/cap"
           
-          # 初始化配置
+          # 初始化 (如果不存在)
           if [ ! -f "capacitor.config.json" ]; then
             $CAP init "SudokuApp" "com.example.sudoku" --web-dir www --y
           fi
           
-          # 重新构建 Android 目录
+          # 重新生成 Android
           rm -rf android
           $CAP add android
           $CAP sync android
           
-          # 4. 进入 Android 目录打包
+          # 4. 构建 APK
           cd android
-          # 解决 Windows 带来的换行符问题
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug
