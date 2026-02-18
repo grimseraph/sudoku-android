@@ -2,69 +2,53 @@ name: "Build Android APK"
 
 "on":
   push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches:
-      - main
-      - master
+    branches: ["main", "master"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Environment
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Dependencies
+      - name: Full Build Process
         run: |
-          npm install -g @ionic/cli
-          npm install
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-
-      - name: Generate Android Project
-        run: |
-          # 1. 确保 www 目录和 index.html 存在
+          # 1. 安装最核心的打包工具
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+          
+          # 2. 确保 Web 目录和文件正确
           mkdir -p www
-          cp sudoku.html www/index.html || true
+          cp sudoku.html www/index.html || echo "Using existing index.html"
           
-          # 2. 如果缺少配置文件，创建一个基本的
+          # 3. 初始化并重新生成 Android 工程 (使用完整包名避免权限问题)
           if [ ! -f "capacitor.config.json" ]; then
-            npx cap init "SudokuApp" "com.example.sudoku" --web-dir www
+            npx @capacitor/cli init "SudokuApp" "com.example.sudoku" --web-dir www --y
           fi
-
-          # 3. 彻底删除旧目录并重新添加 Android 支持
-          rm -rf android
-          npx cap add android
-          npx cap sync
           
-          # 4. 调试：列出当前目录结构，确认 android/gradlew 是否存在
-          ls -F
-          if [ -d "android" ]; then ls -F android; fi
-
-      - name: Build APK
-        run: |
-          # 确保进入目录
+          # 强制刷新 Android 目录
+          rm -rf android
+          npx @capacitor/cli add android
+          npx @capacitor/cli sync android
+          
+          # 4. 进入 Android 目录进行真正的打包
           cd android
-          # 强制转换换行符并赋予权限
+          # 解决 Windows 换行符导致的 127 报错
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          # 执行打包
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK Result
         uses: actions/upload-artifact@v4
         with:
           name: sudoku-app
