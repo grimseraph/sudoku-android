@@ -30,34 +30,38 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          npm install -g @ionic/cli
           npm install
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Prepare Android Project
+      - name: Generate Android Project
         run: |
-          # 确保 www 目录存在
+          # 1. 确保 www 目录和 index.html 存在
           mkdir -p www
-          if [ ! -f "www/index.html" ]; then
-            cp sudoku.html www/index.html || echo "sudoku.html not found"
-          fi
+          cp sudoku.html www/index.html || true
           
-          # 如果没有配置文件，创建一个默认的
+          # 2. 如果缺少配置文件，创建一个基本的
           if [ ! -f "capacitor.config.json" ]; then
-            npx cap init "Sudoku" "com.example.sudoku" --web-dir www
+            npx cap init "SudokuApp" "com.example.sudoku" --web-dir www
           fi
 
-          # 强制重新生成 android 目录，确保 gradlew 肯定存在
+          # 3. 彻底删除旧目录并重新添加 Android 支持
           rm -rf android
           npx cap add android
           npx cap sync
+          
+          # 4. 调试：列出当前目录结构，确认 android/gradlew 是否存在
+          ls -F
+          if [ -d "android" ]; then ls -F android; fi
 
       - name: Build APK
         run: |
+          # 确保进入目录
           cd android
-          # 修复换行符
+          # 强制转换换行符并赋予权限
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          # 运行构建
+          # 执行打包
           ./gradlew assembleDebug
 
       - name: Upload APK
