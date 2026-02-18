@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "cap": "cap",
+    "cap": "node ./node_modules/@capacitor/cli/bin/capacitor",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

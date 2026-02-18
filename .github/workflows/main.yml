@@ -24,32 +24,33 @@ jobs:
 
       - name: Full Build Process
         run: |
-          # 1. 安装工具 (保证最新版本)
+          # 1. 初始化并清除残留，确保环境干净
+          rm -rf node_modules package-lock.json
           npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
           
           # 2. 准备资源
           mkdir -p www
-          cp sudoku.html www/index.html || echo "File exists"
+          cp sudoku.html www/index.html || true
           
-          # 3. 通过 npm 脚本运行，让 npm 帮我们处理路径和权限问题
-          # 这是 Node 项目最稳妥的调用方式
+          # 3. 运行命令（通过 node 直接启动，彻底绕过 shell 权限问题）
+          # 我们不再使用 'cap' 这个缩写，全部通过 npm run
           if [ ! -f "capacitor.config.json" ]; then
             npm run cap -- init "SudokuApp" "com.example.sudoku" --web-dir www --y
           fi
           
-          # 强制刷新 Android 目录
+          # 强制刷新 Android 项目
           rm -rf android
           npm run cap -- add android
           npm run cap -- sync android
           
           # 4. 构建 APK
           cd android
-          # 解决 Windows 换行符导致的 127 报错
+          # 修复 Windows 带来的换行符问题
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK Result
         uses: actions/upload-artifact@v4
         with:
           name: sudoku-app
