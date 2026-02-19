@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "cap": "node ./node_modules/@capacitor/cli/bin/capacitor",
+    "assets": "node ./node_modules/@capacitor/assets/dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

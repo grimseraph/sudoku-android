@@ -24,28 +24,34 @@ jobs:
 
       - name: Full Build Process
         run: |
-          # 1. 初始化并清除残留，确保环境干净
-          rm -rf node_modules package-lock.json
-          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest
+          # 1. 安装核心工具和资产生成工具
+          npm install @capacitor/cli@latest @capacitor/core@latest @capacitor/android@latest @capacitor/assets@latest
           
-          # 2. 准备资源
+          # 2. 准备 Web 资源
           mkdir -p www
           cp sudoku.html www/index.html || true
           
-          # 3. 运行命令（通过 node 直接启动，彻底绕过 shell 权限问题）
-          # 我们不再使用 'cap' 这个缩写，全部通过 npm run
+          # 3. 初始化并刷新 Android 工程
           if [ ! -f "capacitor.config.json" ]; then
             npm run cap -- init "SudokuApp" "com.example.sudoku" --web-dir www --y
           fi
           
-          # 强制刷新 Android 项目
+          # 强制刷新 Android 项目目录
           rm -rf android
           npm run cap -- add android
+          
+          # --- 图标生成 (NEW!) ---
+          # 如果根目录有 icon.png，就自动生成 Android 的图标
+          if [ -f "icon.png" ]; then
+            # 自动创建 assets 配置文件（如果不存在）
+            npx @capacitor/assets generate --android
+          fi
+          
+          # 同步代码和资源到 Android
           npm run cap -- sync android
           
           # 4. 构建 APK
           cd android
-          # 修复 Windows 带来的换行符问题
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug
